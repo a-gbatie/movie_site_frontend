@@ -2,9 +2,13 @@ let addForm = false
 
 // CONSTANTS
 const moviesURL = 'http://localhost:3000/movies'
-// const usersURL = 'http://localhost:3000/users'
+const commentsURL = 'http://localhost:3000/comments'
+const usersURL = 'http://localhost:3000/users'
 const container = document.querySelector('.movie-container')
 const movieForm = document.querySelector('.movie-form')
+// let form = document.createElement('form')
+// form.className = 'comments-form'
+let currentUser = {id: 0}
 // const userForm = document.querySelector('.user-form')
 // const commentsForm = document.querySelector('.comments-form')
 
@@ -55,8 +59,21 @@ function getAll(url){
         .then(movie => buildMovieCard(movie))
     }
 
+    function createUser(user){
+        fetch(usersURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json'
+            },
+            body: JSON.stringify(user),
+        })
+        .then(res => res.json())
+        .then(user => currentUser.id = user.id)
+    }
+
     function createComment(comment){
-        fetch(moviesURL, {
+        fetch(commentsURL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -65,45 +82,45 @@ function getAll(url){
             body: JSON.stringify(comment),
         })
         .then(res => res.json())
-        .then(comment => postComment(comment))
+        .then(console.log)
     }
     
-    function editComment(url, id){
-        fetch(moviesURL/`${id}`, {
+    function editComment(comment){
+        fetch(commentsURL + `/${comment.id}`, {
             method:'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json'
             },
-            body: JSON.stringify(url, id),
+            body: JSON.stringify(comment),
         })
-        .then(res => res.json())
-        .then(console.log)       
+        .then(res => res.json())       
     }
     
-// function updateLikes(movie){
-//     movie.likes++
-//     fetch(moviesURL/`${id}`, {
-//         method:     'PATCH',
-//         headers: {
-//             'Content-Type': 'application/json',
-//             Accept: 'application/json'
-//         },
-//         body: JSON.stringify({likes: movie.likes})
-//     })
-//     .then(res => res.json())
-//     .then(like => {
-//         let movie = document.getElementById(movie.id)
-//         let p = movie.querySelector('p')
-//         p.textContent = `${movie.likes} Users Have Liked This`
-//     })
-// }
+function updateLikes(movie){
+console.log(movie)
+    fetch(moviesURL + `/${movie.id}`, {
+        method:'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+        },
+        body: JSON.stringify({likes: movie.likes})
+    })
+    .then(res => res.json())
+    // .then(like => {
+    //     let movie = document.getElementById(movie.id)
+    //     let p = document.createElement('p')
+    //     p.textContent = `${movie.likes} Users Have Liked This`
+    // })
+}
 
     let main = document.querySelector('main')
     let userForm = document.createElement('form')
     let userLabel = document.createElement('label')
     let userInput = document.createElement('input')
     let submit = document.createElement('input')
+    
     userForm.className = 'user-form'
     userInput.type = 'text'
     userInput.id = 'name'
@@ -114,6 +131,7 @@ function getAll(url){
 
     userForm.append(userLabel, userInput, submit)
     main.appendChild(userForm)
+   
 
 // DOM
 function buildMovieCard(movie){
@@ -123,7 +141,7 @@ function buildMovieCard(movie){
     let img = document.createElement('img')
     let btn = document.createElement('button')
     let form = document.createElement('form')
-    let edit = document.createElement('button')
+    
     // let enter = document.createElement('button')
     let label = document.createElement('label')
     let subInput = document.createElement('input')
@@ -145,40 +163,55 @@ function buildMovieCard(movie){
     input.name = 'comments'
     subInput.type = 'submit'
     subInput.textContent = 'Enter'
-    edit.textContent = 'Edit'
     // enter.textContent = 'Enter'
     label.textContent = 'Leave A Comment:'
-    
-    
     
     // commentsForm.addEventListener('submit', (e) => handleCommentsSubmit(e))
     btn.addEventListener('click', (e) => {
         handleDelete(div.data)
         btn.parentElement.remove()
     })
-    
+
     let ul = document.createElement('ul')
     // let user = {name: e.target.name.value}
     movie.comments.forEach(comment => {
         let li = document.createElement('li')
-        // console.log(user)
-        // li.textContent = `${user.name} said:` + ` ` + comment.comments
-        ul.append(li, edit)
+        let p = document.createElement('p')
+        // let edit = document.createElement('button')
+        // edit.textContent = 'Edit'
+        li.dataset.id = comment.id
+        // console.log(comment.id)
+        p.textContent = `${comment.user.name} said:`
+        li.textContent = comment.comments
+        li.contentEditable = 'true'
+        li.addEventListener('focusout', (e) => handleEditComment(e, comment))
+        // li.append(edit)
+        ul.append(p, li)
+        // edit.addEventListener('click', (e) => handleEditComment(e, comment))
+    })
+
+    let like = document.createElement('button')
+    let likeDisplay = document.createElement('p')
+    like.textContent = 'Like'
+    likeDisplay = movie.likes
+    likeDisplay.textContent = `This movie has been liked ${movie.likes} times!`
+    like.addEventListener('click', (e) => {
+        movie.likes++
+        updateLikes(movie)
     })
     
-    
     form.append(label, input, subInput)
-    div.append(h2, p, img, ul, btn, form)
-    main.appendChild(div)
-
-    form.addEventListener('submit', (e) => handleCommentsSubmit(e))
-    userForm.addEventListener('submit', (e) => handleUserSubmit(e))
+    div.append(h2, p, img, ul, btn, form, likeDisplay, like)
+    main.appendChild(div) 
+    form.addEventListener('submit', (e) => {
+     handleCommentsSubmit(e, movie.id)
+     form.reset()
+    })  
 }
-
-
 
 // EVENT LISTENERS
 movieForm.addEventListener('submit', (e) => handleSubmit(e))
+userForm.addEventListener('submit', (e) => handleUserSubmit(e))
 
 // HANDLERS
 function handleSubmit(e){
@@ -198,6 +231,7 @@ function handleDelete(id){
         method:'DELETE'
     })
     .then(res => res.json())
+    .then(console.log)
 }
 
 function handleUserSubmit(e){
@@ -205,17 +239,27 @@ function handleUserSubmit(e){
     let user = {
         name: e.target.name.value
     }
+    createUser(user)
     userForm.reset()
 }
 
-function handleCommentsSubmit(e){
+function handleCommentsSubmit(e, movie_id){
     e.preventDefault()
     let comment = {
-        comments: e.target.comments.value
+        comments: e.target.comments.value, 
+        movie_id: movie_id,
+        user_id: currentUser.id
     }
     createComment(comment)
-    form.reset()
+    
 }
+
+function handleEditComment(e, comment){
+    e.preventDefault()
+    comment.comments = e.target.innerText
+    editComment(comment)
+}
+
 
 
 
